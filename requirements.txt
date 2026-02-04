@@ -1,0 +1,19 @@
+scanpy
+pertpy
+scipy
+tqdm
+mudata
+statsmodels
+scikit-learn
+matplotlib
+numpy
+pandas
+anndata
+shesha-geometry
+seaborn
+# --- scGPT Dependencies ---
+# Pinning torch/torchtext is required for Python 3.12 compatibility
+torch==2.3.1
+torchtext==0.18.0
+transformers
+scgpt
