@@ -160,7 +160,9 @@ def bootstrap_spearman_ci(x, y, n_bootstrap=10000, ci_level=0.95, seed=320, verb
     ci_high = np.percentile(valid_rhos, 100 * (1 - alpha / 2))
 
     return {
-        'rho': rho, 'ci_low': ci_low, 'ci_high': ci_high,
+        'rho': rho, 
+        'ci_low': ci_low, 
+        'ci_high': ci_high,
         'p': p
     }
 
@@ -168,6 +170,7 @@ def bootstrap_spearman_ci(x, y, n_bootstrap=10000, ci_level=0.95, seed=320, verb
 if __name__ == "__main__":
     # Change the model_dir to the path to your scGPT model
     df = main(model_dir='/path/to/scGPT_model')
+    
     # Run it on scGPT dataframe
     results = bootstrap_spearman_ci(
         df['stability'], 
