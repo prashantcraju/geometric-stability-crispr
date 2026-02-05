@@ -1,4 +1,4 @@
-# From syntax to semantics: the geometric crisis in perturbation biology
+# From syntax to semantics: geometric stability as the missing axis of perturbation biology
 
 ## Setup & Dependencies
 
