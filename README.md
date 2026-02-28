@@ -1,4 +1,4 @@
-# From syntax to semantics: geometric stability as the missing axis of perturbation biology
+#  From Syntax to Semantics: Geometric Stability as the Missing Axis of Perturbation Biology
 
 ## Setup & Dependencies
 
