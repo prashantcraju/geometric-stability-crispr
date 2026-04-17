@@ -44,3 +44,15 @@ To compare the standard results against the scGPT foundation model:
 
 ## Notes
 The code in `geometric_stability_main_analysis.py` was originally used for another paper, *Geometric Stability: The Missing Axis of Representations* (arXiv:2601.09173).
+
+
+### Citation
+
+```bibtex
+@article{raju2026bio,
+  title = {From Syntax to Semantics: Geometric Stability as the Missing Axis of Perturbation Biology},
+  author = {Raju, Prashant C.},
+  journal = {arXiv preprint arXiv:2603.09173},
+  year = {2026}
+}
+```
