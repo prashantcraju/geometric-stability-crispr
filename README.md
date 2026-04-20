@@ -1,4 +1,4 @@
-#  From Syntax to Semantics: Geometric Stability as the Missing Axis of Perturbation Biology
+#  Geometric coherence of single-cell CRISPR perturbations reveals regulatory architecture and predicts cellular stress
 
 ## Setup & Dependencies
 
