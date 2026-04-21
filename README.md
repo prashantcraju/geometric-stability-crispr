@@ -42,17 +42,13 @@ To compare the standard results against the scGPT foundation model:
 
 > **Note:** scGPT requires raw counts (integers). The script handles re-loading raw data if available, but ensure your AnnData object is not pre-normalized if loading from an external file.
 
-## Notes
-The code in `geometric_stability_main_analysis.py` was originally used for another paper, *Geometric Stability: The Missing Axis of Representations* (arXiv:2601.09173).
-
-
-### Citation
+## Citation
 
 ```bibtex
-@article{raju2026bio,
-  title = {From Syntax to Semantics: Geometric Stability as the Missing Axis of Perturbation Biology},
+@article{raju2026crispr,
+  title = {Geometric coherence of single-cell CRISPR perturbations reveals regulatory architecture and predicts cellular stress},
   author = {Raju, Prashant C.},
-  journal = {arXiv preprint arXiv:2603.09173},
+  journal = {arXiv preprint arXiv:2604.16642},
   year = {2026}
 }
 ```
