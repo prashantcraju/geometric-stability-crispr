@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Figure: Norman 2019 — CEBP family (red) vs KLF1 combinations (blue)
+Figure: Norman 2019 — CEBPA combinations (red) vs KLF1 combinations (blue)
 """
 
 try:
@@ -39,12 +39,7 @@ else:
 # ==============================================================================
 
 CEBP_ALL = {
-    'CEBPA', 'CEBPB', 'CEBPE',
-    'CEBPA+JUN', 'CEBPA+CEBPB', 'CEBPA+CEBPE', 'CEBPA+ZC3HAV1',
-    'CEBPB+FOSB', 'CEBPB+LYL1', 'CEBPB+PTPN12', 'CEBPB+MAPK1',
-    'CEBPB+OSR2', 'CEBPB+CEBPE', 'CEBPB+JUN',
-    'CEBPE+RUNX1T1', 'CEBPE+SET', 'CEBPE+ZC3HAV1',
-    'CEBPE+FOSB', 'CEBPE+ETS2', 'CEBPE+CNN1', 'CEBPE+SPI1', 'CEBPE+PTPN12',
+    'CEBPA','CEBPA+JUN', 'CEBPA+CEBPB', 'CEBPA+CEBPE', 'CEBPA+ZC3HAV1',
 }
 
 KLF1_ALL = {

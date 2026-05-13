@@ -20,11 +20,11 @@ To run the scGPT analysis, you must download the pre-trained foundation model we
 ## Usage
 
 ### 1. Standard Geometric Stability (PCA)
-To reproduce Figure 2 using the standard PCA workflow:
+To reproduce the figures using the standard PCA workflow:
 
-1. Run `geometric_stability_main_analysis.py`. This will produce several CSV files with results.
-2. Open `fig_2.py` and update the file path to point to the generated `shesha_crispr_results_euclidean.csv`.
-3. Run `fig_2.py`.
+1. Run `main_analysis_updated.py`. This will produce several CSV files with results.
+2. Open the relevant figure script (`figs/fig2,4,5.py`, `figs/fig3.py`, `figs/fig_norman.py`, or `figs/fig_replogle.py`) and update the file path to point to the generated CSV files (e.g., `shesha_crispr_results_euclidean.csv`).
+3. Run the figure script.
 
 ### 2. Semantic Stability (scGPT)
 To compare the standard results against the scGPT foundation model:
