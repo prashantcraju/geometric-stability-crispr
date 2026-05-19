@@ -1,4 +1,10 @@
 #  Geometric coherence of single-cell CRISPR perturbations reveals regulatory architecture and predicts cellular stress
+<p align="center">
+    <a style="text-decoration:none !important;" href="https://arxiv.org/abs/2604.16642" alt="arXiv"><img src="https://img.shields.io/badge/paper-arXiv-blue" /></a>
+    <a style="text-decoration:none !important;" href="https://huggingface.co/papers/2604.16642" alt="Hugging Face Papers"><img src="https://img.shields.io/badge/paper-Hugging%20Face-FFD21E?logo=huggingface&logoColor=black" /></a>
+</p>
+
+
 
 ## Setup & Dependencies
 
