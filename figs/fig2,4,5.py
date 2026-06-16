@@ -44,10 +44,11 @@ DARK_GRAY = '#555555'
 SKIP_REPLOGLE = '--skip-replogle' in sys.argv
 
 # --- PATHS (update as needed) ---
-PCA_CSV = '/content/drive/MyDrive/shesha-crispr/shesha_crispr_results_euclidean.csv'
-PCA_CSV_ORIGINAL = '/content/drive/MyDrive/shesha-crispr/shesha_crispr_results_euclidean_original.csv'
-SCGPT_CSV = '/content/drive/MyDrive/shesha-crispr/scgpt_all_datasets.csv'
-OUT_DIR = Path('/content/drive/MyDrive/shesha-crispr')
+DATA_DIR = Path('./shesha-crispr')
+PCA_CSV = str(DATA_DIR / 'shesha_crispr_results_euclidean.csv')
+PCA_CSV_ORIGINAL = str(DATA_DIR / 'shesha_crispr_results_euclidean_original.csv')
+SCGPT_CSV = str(DATA_DIR / 'scgpt_all_datasets.csv')
+OUT_DIR = DATA_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

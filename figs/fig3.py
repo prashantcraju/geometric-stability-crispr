@@ -11,18 +11,6 @@ Panels a/b: need Colab with pertpy (extract HSPA5 expression from raw adata)
 Panel c: reads from stress_partial_correlations.csv (run locally or Colab)
 """
 
-try:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    IN_COLAB = True
-except ImportError:
-    IN_COLAB = False
-
-if IN_COLAB:
-    import subprocess, sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-                           "scanpy", "pertpy", "matplotlib", "seaborn"])
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,10 +26,7 @@ from shesha.bio import compute_stability, compute_magnitude
 SEED = 320
 np.random.seed(SEED)
 
-if IN_COLAB:
-    DATA_DIR = Path("/content/drive/MyDrive/shesha-crispr")
-else:
-    DATA_DIR = Path(".")
+DATA_DIR = Path("./shesha-crispr")
 
 OUT_DIR = DATA_DIR
 

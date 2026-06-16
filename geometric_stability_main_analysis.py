@@ -15,9 +15,8 @@ ADDRESSES:
 8. Ablation studies (PCA dims, random seeds, leave-one-out)
 """
 
-import subprocess
-import sys
 import os
+from pathlib import Path
 
 # Set thread counts BEFORE importing numpy/scanpy to ensure deterministic behavior
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -39,7 +38,6 @@ import re
 import hashlib
 import random
 import warnings
-from pathlib import Path
 warnings.filterwarnings('ignore')
 
 # =============================================================================
@@ -63,19 +61,57 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 PCA_DIMS = [10, 20, 30, 50, 100]
 RANDOM_SEEDS = [320, 1991, 9, 7258, 7, 2222, 724, 3, 12, 108, 18, 11, 1754, 411, 103]
 
+# Minimum cells per perturbation for Replogle (genome-scale needs stricter filter)
+REPLOGLE_MIN_CELLS = 50
+
+
+def load_replogle_2022():
+    """Load Replogle 2022 with label cleaning (non-targeting/chr -> control)."""
+    print("    Loading Replogle 2022 K562 essential genes...")
+    adata = pt.dt.replogle_2022_k562_essential()
+    adata.obs['perturbation'] = adata.obs['perturbation'].astype(str)
+
+    def clean_label(x):
+        if 'non-targeting' in x or x.startswith('chr'):
+            return 'control'
+        if 'pos_control' in x:
+            return 'POS_CONTROL'
+        return x.split('_')[0]
+
+    adata.obs['condition'] = adata.obs['perturbation'].apply(clean_label)
+
+    mask = (
+        (adata.obs['condition'] != 'POS_CONTROL') &
+        (adata.obs['condition'] != 'nan')
+    )
+    adata = adata[mask].copy()
+
+    counts = adata.obs['condition'].value_counts()
+    valid = counts[counts >= REPLOGLE_MIN_CELLS].index
+    adata = adata[adata.obs['condition'].isin(valid)].copy()
+
+    n_perts = len(adata.obs['condition'].unique()) - 1
+    n_ctrl = (adata.obs['condition'] == 'control').sum()
+    print(f"    Replogle: {adata.n_obs} cells, {n_perts} perturbations, {n_ctrl} control cells")
+
+    return adata
+
+
 # Dataset configuration
 DATASETS = {
     'Norman 2019 (CRISPRa)': pt.dt.norman_2019,
     'Adamson 2016 (CRISPRi)': pt.dt.adamson_2016_pilot,
     'Dixit 2016 (CRISPRi)': pt.dt.dixit_2016,
-    'Papalexi 2021 (CRISPR)': pt.dt.papalexi_2021
+    'Papalexi 2021 (CRISPR)': pt.dt.papalexi_2021,
+    'Replogle 2022 (CRISPRi)': load_replogle_2022,
 }
 
 # Manual control keywords per dataset
 MANUAL_CONTROLS = {
     'Adamson 2016 (CRISPRi)': ['gal4', 'gfp', 'neg', 'scramble', 'unperturbed', 'nan'],
     'Dixit 2016 (CRISPRi)': ['nan', 'control', 'neg', 'intergenic'],
-    'Papalexi 2021 (CRISPR)': ['nt', 'non-targeting', 'control']
+    'Papalexi 2021 (CRISPR)': ['nt', 'non-targeting', 'control'],
+    'Replogle 2022 (CRISPRi)': ['control'],
 }
 
 # Ablation-specific datasets (subset for faster ablations)
@@ -85,6 +121,9 @@ ABLATION_DATASETS = {
     },
     'Dixit_2016': {
         'loader': pt.dt.dixit_2016,
+    },
+    'Replogle_2022': {
+        'loader': load_replogle_2022,
     },
 }
 
@@ -665,7 +704,7 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
                 return None, None, None
 
         # Find perturbation column
-        possible_cols = ['perturbation_name', 'perturbation', 'gene', 'target', 'guide_id', 'sgRNA', 'gene_target']
+        possible_cols = ['condition', 'perturbation_name', 'perturbation', 'gene', 'target', 'guide_id', 'sgRNA', 'gene_target']
         pert_col = next((c for c in possible_cols if c in adata.obs.columns), None)
 
         if not pert_col:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Shesha Crispr Analysis (v2 - with Replogle 2022)
+Shesha Crispr Analysis (v2 -- with Replogle 2022)
 
 All correlations include 10,000 bootstrap 95% CIs
 
-CHANGES FROM Original:
+CHANGES FROM v1:
 - Added Replogle 2022 K562 essential genes dataset
 - Replogle uses custom loader with label cleaning (non-targeting/chr -> control)
 - DDIT3 stress marker extraction for Replogle (computed before HVG filtering)
@@ -22,25 +22,7 @@ ADDRESSES:
 8. Ablation studies (PCA dims, random seeds, leave-one-out)
 """
 
-import subprocess
-import sys
 import os
-
-# =============================================================================
-# COLAB / ENVIRONMENT SETUP
-# =============================================================================
-
-try:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    IN_COLAB = True
-except ImportError:
-    IN_COLAB = False
-
-if IN_COLAB:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-                           "scanpy", "pertpy", "statsmodels", "tqdm",
-                           "scikit-learn", "mudata", "anndata"])
 
 # Set thread counts BEFORE importing numpy/scanpy to ensure deterministic behavior
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -79,11 +61,7 @@ N_BOOTSTRAP = 10000
 CI_LEVEL = 0.95
 BOOTSTRAP_NAN_WARN_THRESHOLD = 0.05
 
-# Output directory: Google Drive when in Colab, local otherwise
-if IN_COLAB:
-    OUTPUT_DIR = Path("/content/drive/MyDrive/shesha-crispr")
-else:
-    OUTPUT_DIR = Path("./shesha-crispr")
+OUTPUT_DIR = Path("./shesha-crispr")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Ablation parameters
@@ -104,19 +82,19 @@ STRESS_MARKERS = ['DDIT3', 'ATF4', 'XBP1', 'HSPA5']
 def load_replogle_2022():
     """
     Custom loader for Replogle 2022 K562 essential genes dataset.
-
+    
     Handles:
     - Label cleaning: 'non-targeting' and 'chr*' guides -> 'control'
     - Positive controls removed
     - NaN labels removed
     - Minimum cell count filtering (REPLOGLE_MIN_CELLS)
-
+    
     Returns raw AnnData with 'condition' column ready for Shesha analysis.
     """
     print("    Loading Replogle 2022 K562 essential genes...")
     adata = pt.dt.replogle_2022_k562_essential()
     adata.obs['perturbation'] = adata.obs['perturbation'].astype(str)
-
+    
     # Clean labels: group non-targeting and chr* guides as control
     def clean_label(x):
         if 'non-targeting' in x or x.startswith('chr'):
@@ -124,62 +102,59 @@ def load_replogle_2022():
         if 'pos_control' in x:
             return 'POS_CONTROL'
         return x.split('_')[0]
-
+    
     adata.obs['condition'] = adata.obs['perturbation'].apply(clean_label)
-
+    
     # Remove positive controls and NaN labels
     mask = (
         (adata.obs['condition'] != 'POS_CONTROL') &
         (adata.obs['condition'] != 'nan')
     )
     adata = adata[mask].copy()
-
+    
     # Filter for minimum cell count
     counts = adata.obs['condition'].value_counts()
     valid = counts[counts >= REPLOGLE_MIN_CELLS].index
     adata = adata[adata.obs['condition'].isin(valid)].copy()
-
+    
     n_perts = len(adata.obs['condition'].unique()) - 1  # minus control
     n_ctrl = (adata.obs['condition'] == 'control').sum()
     print(f"    Replogle: {adata.n_obs} cells, {n_perts} perturbations, {n_ctrl} control cells")
-
+    
     return adata
 
 
 def load_papalexi_2021():
     """
     Custom loader for Papalexi 2021 that handles hashed MuData modality keys.
-
+    
     Newer versions of mudata/anndata create keys like 'rna:BNBtzfFWwMIDkDEb'
     instead of plain 'rna', which causes pertpy's internal loader to crash
     with a KeyError. This loader catches that and extracts the RNA modality
     by prefix matching.
-
+    
     Returns AnnData with 'gene_target' column synced from MuData level.
     """
     import mudata as md
-
+    
     # First try the normal pertpy loader
     try:
         mdata = pt.dt.papalexi_2021()
     except (KeyError, Exception) as e:
         print(f"    pertpy loader raised: {e}")
         print(f"    Attempting raw MuData read from pertpy cache...")
-
+        
         # pertpy downloads to a cache dir; find the h5mu file
         import glob
         from pathlib import Path as _Path
-
+        
         # Common cache locations (including Colab paths)
         search_paths = [
             _Path.home() / ".cache" / "pertpy",
             _Path.home() / ".cache",
             _Path.home() / ".pertpy",
-            _Path("/root/.cache/pertpy"),  # Colab default
-            _Path("/root/.cache"),
-            _Path("/tmp"),
         ]
-
+        
         h5mu_path = None
         for base in search_paths:
             candidates = glob.glob(str(base / "**" / "*papalexi*"), recursive=True)
@@ -190,35 +165,35 @@ def load_papalexi_2021():
                     break
             if h5mu_path:
                 break
-
+        
         if h5mu_path is None:
             raise FileNotFoundError(
                 "Could not find cached Papalexi h5mu file. "
                 "Try: import pertpy as pt; pt.dt.papalexi_2021() "
                 "to trigger the download, then re-run this script."
             )
-
+        
         print(f"    Reading from: {h5mu_path}")
         mdata = md.read(h5mu_path)
-
+    
     # Now extract RNA modality with prefix matching
     print(f"    Papalexi MuData modalities: {list(mdata.mod.keys())}")
-
+    
     rna_key = None
     for key in mdata.mod.keys():
         if key == 'rna' or key.startswith('rna:') or key.startswith('rna_'):
             rna_key = key
             break
-
+    
     if rna_key is None:
         # Last resort: first modality
         rna_key = list(mdata.mod.keys())[0]
         print(f"    ! No 'rna*' key found, using first modality: '{rna_key}'")
     else:
         print(f"    Using modality: '{rna_key}'")
-
+    
     adata = mdata.mod[rna_key].copy()
-
+    
     # Sync gene_target from MuData obs to RNA obs
     if 'gene_target' in mdata.obs.columns:
         adata.obs['gene_target'] = mdata.obs['gene_target'].values
@@ -237,7 +212,7 @@ def load_papalexi_2021():
         else:
             raise KeyError("'gene_target' not found in MuData.obs columns: "
                           f"{list(mdata.obs.columns)}")
-
+    
     return adata
 
 
@@ -279,10 +254,10 @@ ABLATION_DATASETS = {
 def extract_stress_markers(adata, pert_col, ctrl_label, markers=None):
     """
     Extract mean expression of stress markers per perturbation.
-
+    
     CRITICAL: Must be called BEFORE HVG filtering, since stress genes
     may not be in the top 2000 HVGs.
-
+    
     Parameters
     ----------
     adata : AnnData
@@ -293,16 +268,16 @@ def extract_stress_markers(adata, pert_col, ctrl_label, markers=None):
         Control label
     markers : list of str
         Gene names to extract (default: STRESS_MARKERS)
-
+    
     Returns
     -------
     dict of {marker_name: {perturbation: mean_expression}}
     """
     if markers is None:
         markers = STRESS_MARKERS
-
+    
     stress_data = {}
-
+    
     for marker in markers:
         if marker in adata.var_names:
             marker_expr = {}
@@ -318,7 +293,7 @@ def extract_stress_markers(adata, pert_col, ctrl_label, markers=None):
             print(f"    Extracted {marker}: {len(marker_expr)} perturbations")
         else:
             print(f"    {marker} not found in var_names, skipping")
-
+    
     return stress_data
 
 
@@ -373,11 +348,11 @@ def bootstrap_spearman_ci(x, y, n_bootstrap=10000, ci_level=0.95, seed=42, verbo
     # Filter NaNs before computing percentiles
     valid_rhos = bootstrap_rhos[~np.isnan(bootstrap_rhos)]
     n_dropped = n_bootstrap - len(valid_rhos)
-
+    
     # Check for warnings
     ci_warning = None
     drop_rate = n_dropped / n_bootstrap
-
+    
     if len(valid_rhos) < 100:
         ci_warning = f"Only {len(valid_rhos)} valid bootstraps; CI unreliable"
         if verbose:
@@ -386,7 +361,7 @@ def bootstrap_spearman_ci(x, y, n_bootstrap=10000, ci_level=0.95, seed=42, verbo
             'rho': rho, 'ci_low': np.nan, 'ci_high': np.nan,
             'p': p, 'n_dropped': n_dropped, 'warning': ci_warning
         }
-
+    
     if drop_rate > BOOTSTRAP_NAN_WARN_THRESHOLD:
         ci_warning = f"{n_dropped} bootstraps dropped ({drop_rate*100:.1f}%)"
         if verbose:
@@ -719,7 +694,7 @@ def mixed_effects_analysis(df):
 
     # Fallback
     print("\n!!! Mixed-effects model failed. Falling back to partial correlation.")
-
+    
     def compute_fallback_partial(mag, stab, covariates):
         Z_aug = sm.add_constant(covariates)
         mag_resid = sm.OLS(mag, Z_aug).fit().resid
@@ -821,12 +796,12 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
     """
     Load and preprocess dataset with special handling for Papalexi 2021
     and Replogle 2022.
-
+    
     The Papalexi fix:
     - Papalexi 2021 stores perturbation metadata at MuData level, not in RNA modality
     - We must copy 'gene_target' from mdata.obs to adata.obs
     - 'gene_target' groups all NT guides into 'NT' (2,386 cells)
-
+    
     The Replogle fix:
     - Uses custom loader (load_replogle_2022) that handles label cleaning
     - Returns AnnData with 'condition' column already set
@@ -835,29 +810,29 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
     random.seed(seed)
     np.random.seed(seed)
     sc.settings.seed = seed
-
+    
     print(f"\n>>> LOADING: {dataset_name}...")
-
+    
     # -------------------------------------------------------------------------
     # Replogle: uses custom loader, returns pre-cleaned AnnData
     # -------------------------------------------------------------------------
     is_replogle = 'replogle' in dataset_name.lower()
-
+    
     # -------------------------------------------------------------------------
     # Papalexi: uses custom loader, returns AnnData with gene_target synced
     # -------------------------------------------------------------------------
     is_papalexi = 'papalexi' in dataset_name.lower()
-
+    
     if is_replogle:
         try:
             adata = loader_func()  # load_replogle_2022() handles all cleaning
         except Exception as e:
             print(f"    ! Load Failed: {e}")
             return None, None, None, None
-
+        
         pert_col = 'condition'
         ctrl_label = 'control'
-
+        
         # Extract stress markers BEFORE HVG filtering
         # Normalize first (Replogle loader returns raw counts)
         adata_for_stress = adata.copy()
@@ -865,7 +840,7 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
         sc.pp.log1p(adata_for_stress)
         stress_data = extract_stress_markers(adata_for_stress, pert_col, ctrl_label)
         del adata_for_stress  # Free memory
-
+        
         # Now preprocess for PCA
         try:
             sc.pp.normalize_total(adata, target_sum=1e4)
@@ -875,23 +850,23 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
         except Exception as e:
             print(f"    ! Preprocessing Failed: {e}")
             return None, None, None, None
-
+        
         print(f"    - Control: '{ctrl_label}'")
         n_ctrl = (adata.obs[pert_col] == ctrl_label).sum()
         print(f"    - Control cells: {n_ctrl}")
-
+        
         return adata, pert_col, ctrl_label, stress_data
-
+    
     if is_papalexi:
         try:
             adata = loader_func()  # load_papalexi_2021() returns AnnData with gene_target
         except Exception as e:
             print(f"    ! Load Failed: {e}")
             return None, None, None, None
-
+        
         pert_col = 'gene_target'
         ctrl_label = 'NT'
-
+        
         # Papalexi loader returns AnnData that may or may not be normalized
         # Follow standard preprocessing
         stress_data = {}
@@ -904,7 +879,7 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
             del adata_for_stress
         except Exception:
             pass
-
+        
         try:
             sc.pp.calculate_qc_metrics(adata, inplace=True)
             sc.pp.filter_cells(adata, min_genes=100)
@@ -915,13 +890,13 @@ def load_dataset(dataset_name, loader_func, n_pcs=50, seed=320):
         except Exception as e:
             print(f"    ! Preprocessing Failed: {e}")
             return None, None, None, None
-
+        
         print(f"    - Control: '{ctrl_label}'")
         n_ctrl = (adata.obs[pert_col] == ctrl_label).sum()
         print(f"    - Control cells: {n_ctrl}")
-
+        
         return adata, pert_col, ctrl_label, stress_data
-
+    
     # -------------------------------------------------------------------------
     # All other datasets: standard loading path
     # -------------------------------------------------------------------------
@@ -1067,12 +1042,12 @@ def run_main_analysis():
 
     for dataset_name, loader_func in DATASETS.items():
         result = load_dataset(dataset_name, loader_func)
-
+        
         # Unpack (now 4-tuple with stress_data)
         if result[0] is None:
             continue
         adata, pert_col, ctrl_label, stress_data = result
-
+        
         # Store stress data
         if stress_data:
             all_stress_data[dataset_name] = stress_data
@@ -1347,13 +1322,13 @@ def run_leave_one_out_analysis(df):
     """Compute leave-one-perturbation-out influence on correlation."""
     if len(df) < 10:
         return None
-
+    
     x = df['magnitude'].values
     y = df['stability'].values
     perts = df['perturbation'].values
-
+    
     full_rho, _ = spearmanr(x, y)
-
+    
     loo_results = []
     for i in range(len(df)):
         mask = np.ones(len(df), dtype=bool)
@@ -1364,15 +1339,15 @@ def run_leave_one_out_analysis(df):
             'rho_without': rho_without,
             'delta': full_rho - rho_without
         })
-
+    
     loo_df = pd.DataFrame(loo_results)
-
+    
     most_helpful_idx = loo_df['delta'].idxmax()
     most_helpful = loo_df.loc[most_helpful_idx]
-
+    
     most_harmful_idx = loo_df['delta'].idxmin()
     most_harmful = loo_df.loc[most_harmful_idx]
-
+    
     return {
         'full_rho': full_rho,
         'loo_df': loo_df,
@@ -1438,13 +1413,13 @@ def find_pert_column_ablation(adata):
 def find_control_ablation(adata, pert_col, dataset_name):
     """Find control for ablation datasets."""
     labels = adata.obs[pert_col].astype(str).unique()
-
+    
     exact_matches = ['control', 'ctrl', 'non-targeting', 'nan', 'intergenic']
     for exact in exact_matches:
         for label in labels:
             if label.lower() == exact.lower():
                 return label
-
+    
     token_patterns = {
         'neg': re.compile(r'(^|[_\-\s])neg($|[_\-\s])', re.IGNORECASE),
         'nt':  re.compile(r'(^|[_\-\s])nt($|[_\-\s])', re.IGNORECASE),
@@ -1453,7 +1428,7 @@ def find_control_ablation(adata, pert_col, dataset_name):
         for label in labels:
             if pattern.search(label):
                 return label
-
+    
     substring_keywords = ['control', 'ctrl', 'non-targeting', 'scramble', 'intergenic']
     for label in labels:
         label_lower = label.lower()
@@ -1466,7 +1441,7 @@ def find_control_ablation(adata, pert_col, dataset_name):
 def compute_all_metrics_ablation(adata, pert_col, ctrl_label):
     """Compute metrics for ablation studies."""
     adata.obs[pert_col] = adata.obs[pert_col].astype(str).replace('nan', 'NaN_Control')
-
+    
     ctrl_mask = adata.obs[pert_col] == ctrl_label
     X_ctrl = adata.obsm['X_pca'][ctrl_mask]
 
@@ -1532,14 +1507,14 @@ def run_pca_ablation(dataset_name, dataset_info):
             pert_col = find_pert_column_ablation(adata)
             if pert_col is None:
                 raise ValueError("No perturbation column found.")
-
+            
             ctrl_label = find_control_ablation(adata, pert_col, dataset_name)
             df = compute_all_metrics_ablation(adata, pert_col, ctrl_label)
 
             if len(df) >= 10:
                 stability_vectors[n_pcs] = df.set_index('perturbation')['stability']
                 magnitude_vectors[n_pcs] = df.set_index('perturbation')['magnitude']
-
+                
                 boot_seed = get_bootstrap_seed(dataset_name, 'pca', n_pcs)
                 ci_result = bootstrap_spearman_ci(
                     df['magnitude'].values, df['stability'].values,
@@ -1582,7 +1557,7 @@ def run_seed_ablation(dataset_name, dataset_info):
             pert_col = find_pert_column_ablation(adata)
             if pert_col is None:
                 raise ValueError("No perturbation column found.")
-
+            
             ctrl_label = find_control_ablation(adata, pert_col, dataset_name)
             df = compute_all_metrics_ablation(adata, pert_col, ctrl_label)
 
@@ -1650,7 +1625,7 @@ def run_loo_ablation(dataset_name, dataset_info):
         pert_col = find_pert_column_ablation(adata)
         if pert_col is None:
             raise ValueError("No perturbation column found.")
-
+        
         ctrl_label = find_control_ablation(adata, pert_col, dataset_name)
         df = compute_all_metrics_ablation(adata, pert_col, ctrl_label)
 
@@ -1659,15 +1634,15 @@ def run_loo_ablation(dataset_name, dataset_info):
             return None
 
         loo_results = run_leave_one_out_analysis(df)
-
+        
         print(f"  Full rho: {loo_results['full_rho']:.3f}")
         print(f"  LOO range: [{loo_results['min_rho']:.3f}, {loo_results['max_rho']:.3f}]")
         print(f"  Most helpful: {loo_results['most_helpful_pert']} (delta = +{loo_results['most_helpful_delta']:.4f})")
         print(f"  Most harmful: {loo_results['most_harmful_pert']} (delta = {loo_results['most_harmful_delta']:.4f})")
-
+        
         loo_results['loo_df']['dataset'] = dataset_name
         loo_results['loo_df'].to_csv(os.path.join(OUTPUT_DIR, f'ablation_loo_{dataset_name}.csv'), index=False)
-
+        
         return {
             'dataset': dataset_name,
             'full_rho': loo_results['full_rho'],

@@ -24,20 +24,7 @@ OUTPUT: stress_partial_correlations.csv
         (all saved to same OUTPUT_DIR as main analysis)
 """
 
-import subprocess
-import sys
 import os
-
-try:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    IN_COLAB = True
-except ImportError:
-    IN_COLAB = False
-
-if IN_COLAB:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-                           "scanpy", "statsmodels", "tqdm", "scikit-learn"])
 
 import numpy as np
 import pandas as pd
@@ -63,10 +50,7 @@ SEED = 320
 N_BOOTSTRAP = 10000
 CI_LEVEL = 0.95
 
-if IN_COLAB:
-    OUTPUT_DIR = Path("/content/drive/MyDrive/shesha-crispr")
-else:
-    OUTPUT_DIR = Path("./shesha-crispr")
+OUTPUT_DIR = Path("./shesha-crispr")
 
 STRESS_MARKERS = ['DDIT3', 'ATF4', 'XBP1', 'HSPA5']
 

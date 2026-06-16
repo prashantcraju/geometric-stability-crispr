@@ -10,32 +10,14 @@ on all 5 CRISPR perturbation datasets:
     - Papalexi 2021 (CRISPR)
     - Replogle 2022 (CRISPRi)
 
-Saves per-dataset CSVs + combined CSV + correlation summary to Google Drive
-(MyDrive/CRISPR/) when running in Colab, otherwise to ./scgpt-results/.
+Saves per-dataset CSVs + combined CSV + correlation summary to ./scgpt-results/.
 
 REQUIRES:
     - Pre-downloaded scGPT pretrained model (https://github.com/bowang-lab/scGPT)
     - GPU recommended but CPU fallback supported
 """
 
-import subprocess
-import sys
 import os
-
-# =============================================================================
-# GOOGLE COLAB SETUP -- mount Drive and install dependencies
-# =============================================================================
-try:
-    from google.colab import drive
-    drive.mount('/content/drive')
-    IN_COLAB = True
-except ImportError:
-    IN_COLAB = False
-
-if IN_COLAB:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-                           "scanpy", "pertpy", "statsmodels", "tqdm",
-                           "scikit-learn", "mudata", "anndata", "scgpt"])
 
 import numpy as np
 import pandas as pd
@@ -66,7 +48,7 @@ if torch.cuda.is_available():
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-OUTPUT_DIR = Path("/content/drive/MyDrive/shesha-crispr") if IN_COLAB else Path("./scgpt-results")
+OUTPUT_DIR = Path("./scgpt-results")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 REPLOGLE_MIN_CELLS = 50

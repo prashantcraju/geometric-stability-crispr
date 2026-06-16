@@ -1,16 +1,19 @@
-scanpy
-pertpy
-scipy
+# Pin scverse stack for Papalexi 2021 MuData loader compatibility.
+# Unpinned scanpy 1.12+ pulls anndata 0.12 / numpy 2 and breaks pt.dt.papalexi_2021().
+scanpy==1.11.1
+pertpy==1.0.6
+mudata==0.3.7
+anndata==0.11.4
+scipy==1.14.1
 tqdm
-mudata
-statsmodels
+statsmodels==0.14.4
 scikit-learn
 matplotlib
-numpy
+numpy>=2.0.0,<2.3
 pandas
-anndata
 shesha-geometry
 seaborn
+gseapy
 # --- scGPT Dependencies ---
 # Pinning torch/torchtext is required for Python 3.12 compatibility
 torch==2.3.1
