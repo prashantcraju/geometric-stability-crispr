@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+shesha-crispr/
+*.h5ad
+*.h5mu
+.DS_Store

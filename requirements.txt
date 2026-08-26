@@ -11,9 +11,11 @@ scikit-learn
 matplotlib
 numpy>=2.0.0,<2.3
 pandas
-shesha-geometry
+shesha-geometry==0.2.27  # commit dc0b4b1ea80e7b6ab76b61d4553dcd9757fd6aa1; freeze Sp uses pipeline_core.calculate_sp
+pingouin
 seaborn
 gseapy
+phate
 # --- scGPT Dependencies ---
 # Pinning torch/torchtext is required for Python 3.12 compatibility
 torch==2.3.1
